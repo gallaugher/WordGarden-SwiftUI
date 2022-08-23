@@ -8,6 +8,7 @@ import SwiftUI
 import AVFAudio
 
 struct ContentView: View {
+    @State private var opacity = 1.0
     @State private var flowerImage = "flower8"
     @State private var imageName = "flower8"
     @State private var imagePrefix = "flower"
@@ -114,6 +115,7 @@ struct ContentView: View {
                         gameStatusMessage = "You've Made Zero Guesses"
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(.mint)
                 }
             }
             
@@ -126,11 +128,11 @@ struct ContentView: View {
             
             Spacer()
             
-            //            Image("flower\(wrongGuessesRemaining)")
             Image(imageName)
                 .resizable()
                 .scaledToFit()
-            //                .animation(.default, value: wrongGuessesRemaining)
+                .animation(.default, value: imageName)
+            
             
         }
         .ignoresSafeArea(.all, edges: .bottom)
@@ -164,9 +166,7 @@ struct ContentView: View {
         // Update flowers if wrong guess
         if !wordToGuess.contains(guessedLetter) {
             wrongGuessesRemaining -= 1
-            withAnimation {
-                imageName = "wilt\(wrongGuessesRemaining)"
-            }
+            imageName = "wilt\(wrongGuessesRemaining)"
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 imageName = "flower\(wrongGuessesRemaining)"
             }
