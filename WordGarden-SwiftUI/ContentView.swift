@@ -8,7 +8,7 @@ import SwiftUI
 import AVFAudio
 
 struct ContentView: View {
-    @State private var opacity = 1.0
+    @State private var durationValue = 5.0
     @State private var flowerImage = "flower8"
     @State private var imageName = "flower8"
     @State private var imagePrefix = "flower"
@@ -24,9 +24,11 @@ struct ContentView: View {
     @State private var wordToGuess = ""
     @State private var wordBeingRevealed = ""
     @State private var lettersGuessed = ""
-    @State private var gameStatusMessage = "You've Made Zero Guesses"
+//    @State private var gameStatusMessage = "You've Made Zero Guesses"
+    @State private var gameStatusMessage = "How Many Guesses to Uncover the Hidden Word?"
     @State private var textFieldIsDisabled = false
     @State private var gameOver = false
+    @State private var playAgainButtonLabel = "Another Word?"
     
     var wordsToGuess = ["SWIFT", "DOG", "CAT"]
     let maxNumberOfWrongGuesses = 8
@@ -54,9 +56,12 @@ struct ContentView: View {
             Spacer()
             
             Group {
-                Text("How Many Guesses to Uncover the Hidden Word?")
+//                Text("How Many Guesses to Uncover the Hidden Word?")
+                Text(gameStatusMessage)
                     .font(.title)
                     .multilineTextAlignment(.center)
+                    .frame(height: 80)
+                    .minimumScaleFactor(0.50)
                     .padding()
                 
                 Spacer()
@@ -66,42 +71,55 @@ struct ContentView: View {
                 Spacer()
                 
                 HStack{
-                    TextField("", text: $guessedLetter)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 30)
-                        .textInputAutocapitalization(.characters)
-                        .submitLabel(.done)
-                        .onChange(of: guessedLetter, perform: { newValue in
-                            guard let lastLetter = guessedLetter.last else {
+                    if playAgainHidden {
+                        TextField("", text: $guessedLetter)
+                            .textFieldStyle(.roundedBorder)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 5)
+                                    .stroke(.gray, lineWidth: 2)
+                            )
+                            .disableAutocorrection(true)
+                            .frame(width: 30)
+                            .textInputAutocapitalization(.characters)
+                            .submitLabel(.done)
+                            .keyboardType(.asciiCapable)
+                            .onChange(of: guessedLetter, perform: { _ in
+                                guessedLetter = guessedLetter.trimmingCharacters(in: .letters.inverted)
+                                guard let lastLetter = guessedLetter.last else {
+                                    return
+                                }
+                                guessedLetter = String(lastLetter.uppercased())
+                            })
+                            .onSubmit {
+                                guard guessedLetter != "" else {
+                                    return
+                                }
+                                guessALetter()
+                                updateUIAfterGuess()
+                            }
+                            .focused($textFieldIsFocused)
+                        
+                        
+                        Button("Guess a Letter") {
+                            guard guessedLetter != "" else {
                                 return
                             }
-                            guessedLetter = String(lastLetter)
-                        })
-                        .onSubmit {
-                            // TODO: Same code as Button code
                             guessALetter()
+                            textFieldIsFocused = false
                             updateUIAfterGuess()
                         }
-                        .focused($textFieldIsFocused)
-                        .disabled(textFieldIsDisabled)
-                    
-                    Button("Guess a Letter") {
-                        guessALetter()
-                        textFieldIsFocused = false
-                        updateUIAfterGuess()
+                        .buttonStyle(.bordered)
+                        .tint(.mint)
+                        .disabled(guessedLetter.isEmpty || gameOver)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.mint)
-                    .disabled(guessedLetter.isEmpty || gameOver)
                 }
                 
                 if !playAgainHidden {
-                    Button("Play Again?") {
+                    Button(playAgainButtonLabel) {
                         if currentWordIndex == wordsToGuess.count {
                             currentWordIndex = 0
                             wordsGuessed = 0
                             wordsMissed = 0
-                            
                         }
                         imageName = "flower8"
                         playAgainHidden = true
@@ -112,7 +130,8 @@ struct ContentView: View {
                         wordBeingRevealed = "_" + String(repeating: " _", count: wordToGuess.count-1)
                         lettersGuessedCount = 0
                         lettersGuessed = ""
-                        gameStatusMessage = "You've Made Zero Guesses"
+                        gameStatusMessage = "How Many Guesses to Uncover the Hidden Word?"
+                        playAgainButtonLabel = "Another Word?"
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.mint)
@@ -121,17 +140,10 @@ struct ContentView: View {
             
             Spacer()
             
-            Text(gameStatusMessage)
-                .font(.title)
-                .multilineTextAlignment(.center)
-                .padding()
-            
-            Spacer()
-            
             Image(imageName)
                 .resizable()
                 .scaledToFit()
-                .animation(.default, value: imageName)
+                .animation(.easeIn(duration: 0.75), value: imageName)
             
             
         }
@@ -166,9 +178,12 @@ struct ContentView: View {
         // Update flowers if wrong guess
         if !wordToGuess.contains(guessedLetter) {
             wrongGuessesRemaining -= 1
+            durationValue = 5.0
             imageName = "wilt\(wrongGuessesRemaining)"
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            print("durationValue = \(durationValue), imageName = \(imageName)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
                 imageName = "flower\(wrongGuessesRemaining)"
+                durationValue = 0.01
             }
             playSound(soundName: "incorrect")
         } else {
@@ -192,7 +207,8 @@ struct ContentView: View {
         }
         
         if currentWordIndex == wordsToGuess.count {
-            gameStatusMessage = gameStatusMessage + "\n\nYou've Tried All of the Words. Restart from the Beginning?"
+            playAgainButtonLabel = "Restart Game?"
+            gameStatusMessage = gameStatusMessage + "\nYou've Tried All of the Words. Restart from the Beginning?"
         }
     }
     
